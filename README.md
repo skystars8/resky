@@ -19,3 +19,5 @@ Header is passed as AAD
 This is the proper way to use AES-256-GCM-SIV (sort of lol) Ai can easily 
 make it take a key file or password input via argon2id. This is a starter kit- use as is for informal 
 encryption or have ai change it. 
+
+c- Xor transformer / otp. Versatile. 
