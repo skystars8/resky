@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP XOR • File Encryptor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
+        
+        :root {
+            --primary: #3b82f6;
+        }
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .font-display {
+            font-family: 'Space Grotesk', 'Inter', system_ui, sans-serif;
+            font-weight: 600;
+        }
+
+        .section-header {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        .terminal {
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .feature-card {
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                       box-shadow 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        .nav-active {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-screen-xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center">
+                    <i class="fa-solid fa-lock text-white text-2xl"></i>
+                </div>
+                <div>
+                    <span class="font-display text-2xl font-semibold tracking-tighter">OTP XOR</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-x-2 text-sm">
+                <a href="#usage" class="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors">Usage</a>
+                <a href="#safety" class="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors">Safety</a>
+                <a href="#build" class="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors">Build</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <div class="max-w-screen-xl mx-auto px-6 pt-16 pb-12">
+        <div class="max-w-2xl">
+            <div class="inline-flex items-center gap-x-2 bg-blue-100 text-blue-700 px-4 py-1.5 rounded-3xl text-sm font-medium mb-6">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Secure • Simple • Reliable</span>
+            </div>
+            
+            <h1 class="font-display text-6xl font-semibold tracking-tighter leading-none mb-4">
+                OTP-style<br>
+                File Encryptor
+            </h1>
+            <p class="text-xl text-slate-600 max-w-md">
+                A fast, safe, and reliable command-line tool for encrypting files using XOR with a key file.
+            </p>
+            
+            <div class="flex items-center gap-x-3 mt-8">
+                <a href="#usage" 
+                   class="inline-flex items-center justify-center px-6 py-3 bg-slate-900 hover:bg-black transition-colors text-white rounded-3xl font-medium text-sm">
+                    <span>Get Started</span>
+                </a>
+                <a href="#safety" 
+                   class="inline-flex items-center justify-center px-6 py-3 border border-slate-300 hover:bg-white transition-colors rounded-3xl font-medium text-sm">
+                    Learn about safety
+                </a>
+            </div>
+            
+            <div class="mt-6 flex items-center gap-x-4 text-sm text-slate-500">
+                <div class="flex items-center gap-x-1.5">
+                    <i class="fa-solid fa-check text-emerald-500"></i>
+                    <span>Atomic writes</span>
+                </div>
+                <div class="flex items-center gap-x-1.5">
+                    <i class="fa-solid fa-check text-emerald-500"></i>
+                    <span>Streaming I/O</span>
+                </div>
+                <div class="flex items-center gap-x-1.5">
+                    <i class="fa-solid fa-check text-emerald-500"></i>
+                    <span>Zero dependencies</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features -->
+    <div class="max-w-screen-xl mx-auto px-6 pb-16">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <div class="feature-card bg-white border border-slate-200 rounded-3xl p-6">
+                <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-5">
+                    <i class="fa-solid fa-sync fa-lg"></i>
+                </div>
+                <h3 class="font-semibold text-xl mb-2">Atomic &amp; Safe Writes</h3>
+                <p class="text-slate-600">Writes to a temporary file first, then atomically renames using <code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">rename()</code>. No partial or corrupted files on crash.</p>
+            </div>
+            
+            <div class="feature-card bg-white border border-slate-200 rounded-3xl p-6">
+                <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-5">
+                    <i class="fa-solid fa-memory fa-lg"></i>
+                </div>
+                <h3 class="font-semibold text-xl mb-2">Streaming &amp; Efficient</h3>
+                <p class="text-slate-600">Processes files in small chunks. Works with very large files without loading everything into memory.</p>
+            </div>
+            
+            <div class="feature-card bg-white border border-slate-200 rounded-3xl p-6">
+                <div class="w-12 h-12 bg-violet-100 text-violet-600 rounded-2xl flex items-center justify-center mb-5">
+                    <i class="fa-solid fa-key fa-lg"></i>
+                </div>
+                <h3 class="font-semibold text-xl mb-2">Automatic Decryption</h3>
+                <p class="text-slate-600">The wrap mode is stored inside the encrypted file. Just run <code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">otp D file.enc</code> — no flags needed.</p>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Usage -->
+    <div id="usage" class="max-w-screen-xl mx-auto px-6 pb-16">
+        <div class="mb-8">
+            <h2 class="section-header">Usage</h2>
+            <p class="text-slate-600 mt-2">Simple, memorable commands.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Encrypt -->
+            <div class="bg-white border border-slate-200 rounded-3xl p-8">
+                <div class="flex items-center gap-x-3 mb-4">
+                    <div class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-2xl">ENCRYPT</div>
+                </div>
+                <div class="terminal p-5 rounded-2xl text-sm font-mono mb-4">
+                    <div class="text-emerald-400">$ otp E secret.txt</div>
+                    <div class="text-slate-400 mt-1">Encrypted successfully: secret.txt → secret.enc</div>
+                </div>
+                
+                <div class="terminal p-5 rounded-2xl text-sm font-mono">
+                    <div class="text-emerald-400">$ otp E --wrap largefile.dat</div>
+                    <div class="text-slate-400 mt-1">Encrypted successfully: largefile.dat → largefile.enc</div>
+                </div>
+            </div>
+
+            <!-- Decrypt -->
+            <div class="bg-white border border-slate-200 rounded-3xl p-8">
+                <div class="flex items-center gap-x-3 mb-4">
+                    <div class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-2xl">DECRYPT</div>
+                </div>
+                <div class="terminal p-5 rounded-2xl text-sm font-mono">
+                    <div class="text-emerald-400">$ otp D secret.enc</div>
+                    <div class="text-slate-400 mt-1">Decrypted successfully: secret.enc → secret.txt</div>
+                </div>
+                
+                <div class="mt-6 text-sm text-slate-600">
+                    <strong class="font-medium">Note:</strong> Decryption is fully automatic. 
+                    The tool reads the encryption mode from the file header.
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Safety Section -->
+    <div id="safety" class="bg-white border-y border-slate-200 py-16">
+        <div class="max-w-screen-xl mx-auto px-6">
+            <div class="max-w-2xl mb-10">
+                <h2 class="section-header">Data Safety &amp; Integrity</h2>
+                <p class="mt-3 text-slate-600">This tool was designed with reliability as the top priority.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 text-sm">
+                <div>
+                    <h4 class="font-semibold mb-3 flex items-center gap-x-2">
+                        <i class="fa-solid fa-check-circle text-emerald-500"></i> 
+                        <span>Atomic File Operations</span>
+                    </h4>
+                    <p class="text-slate-600">All writes go through a temporary file first. The final file only appears after the data is fully written and synced to disk.</p>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-3 flex items-center gap-x-2">
+                        <i class="fa-solid fa-check-circle text-emerald-500"></i> 
+                        <span>No In-Place Overwrites</span>
+                    </h4>
+                    <p class="text-slate-600">The original file is never modified. A new <code>.enc</code> file is always created, giving you a safe backup.</p>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-3 flex items-center gap-x-2">
+                        <i class="fa-solid fa-check-circle text-emerald-500"></i> 
+                        <span>Streaming Processing</span>
+                    </h4>
+                    <p class="text-slate-600">Files are processed in small chunks. Even very large files (tens of GB) can be encrypted without high memory usage.</p>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-3 flex items-center gap-x-2">
+                        <i class="fa-solid fa-check-circle text-emerald-500"></i> 
+                        <span>Self-Describing Files</span>
+                    </h4>
+                    <p class="text-slate-600">The encryption mode (wrap or not) and original filename are stored inside the <code>.enc</code> file. Decryption requires no extra flags.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Build Instructions -->
+    <div id="build" class="max-w-screen-xl mx-auto px-6 py-16">
+        <div class="mb-8">
+            <h2 class="section-header">Building from Source</h2>
+        </div>
+        
+        <div class="bg-white border border-slate-200 rounded-3xl p-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-12">
+                <div>
+                    <h4 class="font-semibold mb-4">Requirements</h4>
+                    <ul class="space-y-2 text-sm text-slate-600">
+                        <li class="flex items-start gap-x-2">
+                            <i class="fa-solid fa-check mt-1 text-emerald-500"></i>
+                            <span>Rust 1.96 or newer</span>
+                        </li>
+                        <li class="flex items-start gap-x-2">
+                            <i class="fa-solid fa-check mt-1 text-emerald-500"></i>
+                            <span>Cargo (comes with Rust)</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-3">Build Commands</h4>
+                    <div class="terminal rounded-2xl p-5 text-sm font-mono">
+                        <div>git clone &lt;repo&gt;</div>
+                        <div>cd otp</div>
+                        <div class="mt-2">cargo build --release</div>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-3">The binary will be at <code class="bg-slate-100 px-1.5 py-0.5 rounded">target/release/otp</code></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="border-t border-slate-200 py-8">
+        <div class="max-w-screen-xl mx-auto px-6 text-center text-sm text-slate-500">
+            <p>Built with safety and simplicity in mind. No external dependencies.</p>
+            <p class="mt-1">Key file must be named <code class="font-mono text-xs">key.key</code> and placed next to the executable.</p>
+        </div>
+    </div>
+
+</body>
+</html>
