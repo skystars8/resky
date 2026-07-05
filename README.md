@@ -21,3 +21,6 @@ make it take a key file or password input via argon2id. This is a starter kit- u
 encryption or have ai change it. 
 
 c- Xor transformer / otp. Versatile. 
+
+
+d- more strict otp style app. less variables, more reliability. 
