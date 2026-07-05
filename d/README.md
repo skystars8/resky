@@ -54,7 +54,7 @@ The resulting `.enc` file is indistinguishable from random data and contains **n
 ## Building
 
 ```bash
-rustc --edition=2021 -o otp main.rs
+rustc --edition=2024 -o otp main.rs
 ```
 
 Or integrate into a Cargo project if desired.
