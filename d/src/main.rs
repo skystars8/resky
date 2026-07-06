@@ -123,6 +123,13 @@ const TAG_LEN: usize = 16;
 /// Length of the nonce prefix stored in header.
 const NONCE_PREFIX_LEN: usize = 24;
 
+/// Serialized size of the v1 header in bytes.
+/// This is kept as a named constant for documentation and tests.
+const HEADER_SIZE: usize = 70;
+
+// Compile-time check that our header size constant matches reality
+const _: () = assert!(HEADER_SIZE == 8 + 1 + 1 + 16 + 4 + 4 + 1 + 3 + 24 + 8);
+
 /// Length of the derived encryption key (32 bytes for XChaCha20Poly1305).
 const KEY_LEN: usize = 32;
 
@@ -327,11 +334,14 @@ fn read_header<R: Read>(reader: &mut R) -> Result<FileHeader> {
 // FILESYSTEM: Atomic write helper (temp + rename + sync + cleanup)
 // ============================================================================
 
-/// Generate a temporary path next to the target (same directory = same filesystem).
-/// Using a fixed ".crypt.tmp" suffix is simple and sufficient; collision is
-/// extremely unlikely and we error out with a clear message if it exists.
+/// Generate a temporary path next to the target.
+/// Uses PID + small random value to greatly reduce collision risk.
 fn make_temp_path(target: &Path) -> PathBuf {
-    target.with_extension("crypt.tmp")
+    let pid = std::process::id();
+    let mut rand = [0u8; 4];
+    OsRng.fill_bytes(&mut rand);
+    let rand_hex = format!("{:02x}{:02x}{:02x}{:02x}", rand[0], rand[1], rand[2], rand[3]);
+    target.with_extension(format!("crypt.{}.{}.tmp", pid, rand_hex))
 }
 
 // ============================================================================
@@ -391,7 +401,7 @@ fn encrypt_file(input_path: &Path, output_path: &Path, password: &[u8]) -> Resul
             )?;
             let cipher = XChaCha20Poly1305::new(Key::from_slice(&key_arr));
             let mut key_arr = key_arr;
-            key_arr.zeroize(); // Zeroize derived key as soon as cipher has its copy
+            key_arr.zeroize(); // Zeroize our local copy of the derived key after cipher initialization
 
             // === Write header (public metadata) ===
             write_header(
@@ -419,7 +429,11 @@ fn encrypt_file(input_path: &Path, output_path: &Path, password: &[u8]) -> Resul
                 let plaintext = &read_buf[..this_len];
                 let nonce_bytes = make_chunk_nonce_bytes(&nonce_prefix, chunk_num);
                 let nonce: &GenericArray<u8, U24> = GenericArray::<u8, U24>::from_slice(&nonce_bytes);
-                let aad = chunk_num.to_le_bytes();
+
+                // AAD binds chunk number and original file size for integrity and ordering.
+                let mut aad = [0u8; 16];
+                aad[..8].copy_from_slice(&chunk_num.to_le_bytes());
+                aad[8..].copy_from_slice(&original_size.to_le_bytes());
 
                 let ciphertext = cipher
                     .encrypt(
@@ -432,6 +446,9 @@ fn encrypt_file(input_path: &Path, output_path: &Path, password: &[u8]) -> Resul
                     .map_err(|e| {
                         anyhow::anyhow!("Encryption failed for chunk {}: {}", chunk_num, e)
                     })?;
+
+                // Zeroize plaintext after encryption (defense in depth)
+                read_buf[..this_len].zeroize();
 
                 buf_writer
                     .write_all(&ciphertext)
@@ -458,6 +475,15 @@ fn encrypt_file(input_path: &Path, output_path: &Path, password: &[u8]) -> Resul
         drop(temp_file);
         fs::rename(&temp_path, output_path)
             .with_context(|| format!("Failed to atomically rename temporary file to final output {}", output_path.display()))?;
+
+        // Best-effort directory sync for durability (Unix)
+        #[cfg(unix)]
+        if let Some(parent) = output_path.parent() {
+            if let Ok(dir) = std::fs::File::open(parent) {
+                let _ = dir.sync_all();
+            }
+        }
+
         Ok(())
     } else {
         drop(temp_file);
@@ -487,6 +513,13 @@ fn decrypt_file(input_path: &Path, output_path: &Path, password: &[u8]) -> Resul
             "Temporary file {} already exists. Please remove it manually and try again.",
             temp_path.display()
         );
+    }
+
+    // Early size check to fail fast on obviously malformed files
+    let input_meta = fs::metadata(input_path)
+        .with_context(|| format!("Failed to read metadata for {}", input_path.display()))?;
+    if input_meta.len() < HEADER_SIZE as u64 {
+        bail!("File too small to be a valid crypt encrypted file");
     }
 
     let temp_file = OpenOptions::new()
@@ -527,18 +560,25 @@ fn decrypt_file(input_path: &Path, output_path: &Path, password: &[u8]) -> Resul
 
             let mut decrypted_total: u64 = 0;
 
+            // Pre-allocate buffers once (reuse for all chunks)
+            let mut ct_buf = vec![0u8; CHUNK_SIZE + TAG_LEN];
+
             for chunk_num in 0..num_chunks {
-                let expected_pt_len = if chunk_num == num_chunks - 1 {
-                    (header.original_size % chunk_size_u64) as usize
+                let expected_pt_len = if chunk_num == num_chunks.saturating_sub(1) {
+                    let rem = header.original_size % chunk_size_u64;
+                    if rem == 0 && header.original_size != 0 {
+                        CHUNK_SIZE
+                    } else {
+                        rem as usize
+                    }
                 } else {
                     CHUNK_SIZE
                 };
 
                 let ct_len = expected_pt_len + TAG_LEN;
-                let mut ct_buf = vec![0u8; ct_len];
 
                 reader
-                    .read_exact(&mut ct_buf)
+                    .read_exact(&mut ct_buf[..ct_len])
                     .with_context(|| {
                         format!(
                             "Unexpected end of file while reading chunk {} (file is truncated or corrupted)",
@@ -548,13 +588,17 @@ fn decrypt_file(input_path: &Path, output_path: &Path, password: &[u8]) -> Resul
 
                 let nonce_bytes = make_chunk_nonce_bytes(&header.nonce_prefix, chunk_num);
                 let nonce: &GenericArray<u8, U24> = GenericArray::<u8, U24>::from_slice(&nonce_bytes);
-                let aad = chunk_num.to_le_bytes();
+
+                // AAD binds chunk number and original file size
+                let mut aad = [0u8; 16];
+                aad[..8].copy_from_slice(&chunk_num.to_le_bytes());
+                aad[8..].copy_from_slice(&header.original_size.to_le_bytes());
 
                 let plaintext = cipher
                     .decrypt(
                         &nonce,
                         Payload {
-                            msg: &ct_buf,
+                            msg: &ct_buf[..ct_len],
                             aad: &aad,
                         },
                     )
@@ -573,8 +617,12 @@ fn decrypt_file(input_path: &Path, output_path: &Path, password: &[u8]) -> Resul
                     .write_all(&plaintext)
                     .context("Failed to write decrypted chunk")?;
 
+                // Zeroize decrypted plaintext after use (defense in depth)
+                let mut pt = plaintext;
+                pt.zeroize();
+
                 decrypted_total = decrypted_total
-                    .checked_add(plaintext.len() as u64)
+                    .checked_add(pt.len() as u64)
                     .expect("Decrypted size overflow (impossible)");
             }
 
@@ -611,6 +659,15 @@ fn decrypt_file(input_path: &Path, output_path: &Path, password: &[u8]) -> Resul
         drop(temp_file);
         fs::rename(&temp_path, output_path)
             .with_context(|| format!("Failed to atomically rename to final output {}", output_path.display()))?;
+
+        // Best-effort directory sync for durability (Unix)
+        #[cfg(unix)]
+        if let Some(parent) = output_path.parent() {
+            if let Ok(dir) = std::fs::File::open(parent) {
+                let _ = dir.sync_all();
+            }
+        }
+
         Ok(())
     } else {
         drop(temp_file);
@@ -735,7 +792,7 @@ mod tests {
         decrypt_file(&enc, &dec, b"test-password-123").unwrap();
 
         assert_eq!(fs::read(&dec).unwrap(), b"");
-        assert_eq!(fs::metadata(&enc).unwrap().len(), 70); // header only
+        assert_eq!(fs::metadata(&enc).unwrap().len(), HEADER_SIZE as u64); // header only
     }
 
     #[test]
@@ -856,7 +913,7 @@ mod tests {
 
         // Flip a bit in the first ciphertext byte (after header)
         let mut enc_data = fs::read(&enc).unwrap();
-        let header_len = 70usize;
+        let header_len = HEADER_SIZE;
         if enc_data.len() > header_len {
             enc_data[header_len] ^= 0x01;
             fs::write(&enc, &enc_data).unwrap();
@@ -885,7 +942,7 @@ mod tests {
 
         // Truncate the encrypted file in the middle of second chunk
         let enc_data = fs::read(&enc).unwrap();
-        let truncated_len = 70 + CHUNK_SIZE + TAG_LEN + 50; // header + full first ct + partial second
+        let truncated_len = HEADER_SIZE + CHUNK_SIZE + TAG_LEN + 50; // header + full first ct + partial second
         let truncated: Vec<u8> = enc_data.into_iter().take(truncated_len).collect();
         fs::write(&enc, &truncated).unwrap();
 
