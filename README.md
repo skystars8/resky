@@ -23,4 +23,4 @@ encryption or have ai change it.
 c- Xor transformer / otp. Versatile. 
 
 
-d- more strict otp style app. less variables, more reliability. 
+
