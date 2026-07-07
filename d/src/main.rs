@@ -109,6 +109,7 @@ use chacha20poly1305::{
 use clap::Parser;
 use rand::{rngs::OsRng, RngCore};
 use zeroize::Zeroize;
+use scopeguard;
 
 #[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;
@@ -629,13 +630,14 @@ fn decrypt_file(input_path: &Path, output_path: &Path, password: &[u8]) -> Resul
                 buf_writer
                     .write_all(&plaintext)
                     .context("Failed to write decrypted chunk")?;
-                // Zeroize decrypted plaintext after use (defense in depth).
-                // Use scopeguard to guarantee zeroization even if a panic occurs
-                // during write_all (e.g. OOM or custom writer issue).
-                let mut plaintext = plaintext;
-                plaintext.zeroize();
+                // Capture length before any zeroization (Vec::zeroize sets len to 0).
+                let pt_len = plaintext.len();
+                // Use scopeguard so that zeroization happens even if a later operation
+                // (or a hypothetical panic after this point) unwinds. The guard ensures
+                // the sensitive plaintext buffer is wiped on drop (including during unwinding).
+                let _guard = scopeguard::guard(plaintext, |mut p| p.zeroize());
                 decrypted_total = decrypted_total
-                    .checked_add(plaintext.len() as u64)
+                    .checked_add(pt_len as u64)
                     .expect("Decrypted size overflow (impossible)");
             }
             buf_writer.flush().context("Failed to flush decrypted data")?;
