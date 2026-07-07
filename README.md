@@ -22,7 +22,7 @@ encryption or have ai change it.
 
 c- Xor transformer / otp. Versatile. 
 
-d- password XChaCha-poly1305 - (currently different ai audits argue with each-other about minor issues, overall a very solid start tho. 
+d- password XChaCha-poly1305 - (currently different ai audits argue with each-other about minor issues, overall a very solid start tho. this is in dev mode till ai gets more consistent at auditing the details. 
 
 
 
