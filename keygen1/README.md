@@ -1,43 +1,43 @@
 # keygen1
 
-A modern CLI tool to generate **deterministic, high-quality cryptographic key files** from a password.
+A CLI tool to generate **deterministic cryptographic key files** from a password using modern algorithms.
 
 ## Features
 
-- **Strong security**: Uses **Argon2id** (memory-hard password hashing) followed by **BLAKE3 XOF** expansion.
-- **Resistant to brute-force**: Argon2id with 64 MiB memory usage makes offline attacks significantly harder compared to fast hashes.
-- **Deterministic**: Same password + size = identical `key.key` every time.
-- **Arbitrary length**: Supports any size from 1 byte up to 20 GiB.
-- **No repetition**: Output is generated via BLAKE3's extendable-output function — never repeats short patterns.
-- **Clean UX**: Proper hidden password input + progress bar for large files.
-- **Safe by default**: Refuses to overwrite an existing `key.key` file.
-- **Modern Rust**: Built for Rust 1.96+ with edition 2024.
+- Uses **Argon2id** (memory-hard password hashing) followed by **BLAKE3 XOF** for key expansion.
+- Resistant to offline brute-force attacks thanks to Argon2id (64 MiB memory, 3 iterations).
+- Fully **deterministic**: The same password and size always produce the same `key.key`.
+- Supports any size from 1 byte up to 20 GiB.
+- Output has excellent statistical properties and does not contain short repeating patterns.
+- Clean terminal experience with hidden password input and progress bar for large files.
+- Refuses to overwrite an existing `key.key` file.
+- Written in modern Rust (edition 2024).
 
 ## Why This Design?
 
-Most simple tools just hash the password with BLAKE3/SHA-256 and expand the output. This is fast but weak against password brute-forcing.
+Many simple tools hash the password directly with BLAKE3 or SHA-256. While fast, this offers little protection against password guessing attacks.
 
-`keygen1` does it properly:
+`keygen1` uses a stronger two-step approach:
 
-1. **Argon2id** first — memory-hard KDF (recommended by OWASP).
-2. **BLAKE3 XOF** second — for efficient, cryptographically strong expansion to any length.
+1. **Argon2id** first — A memory-hard key derivation function (recommended by OWASP) to derive strong key material from the password.
+2. **BLAKE3 XOF** second — Used to expand the derived material into an arbitrary-length keystream with good domain separation.
 
-This combination gives you both **password brute-force resistance** and **high-quality long output**.
+This gives significantly better protection against brute-force attacks while still allowing efficient generation of very long keys.
 
 ## Requirements
 
 - Rust 1.96 or newer
-- A reasonably modern CPU (Argon2id is CPU + memory intensive)
+- A reasonably modern CPU (Argon2id is somewhat CPU and memory intensive)
 
 ## Installation
 
 ```bash
-git clone <repo-url>
+git clone <your-repo>
 cd keygen1
 cargo build --release
 ```
 
-The binary will be at `target/release/keygen1`.
+The compiled binary will be located at `target/release/keygen1`.
 
 ## Usage
 
@@ -48,44 +48,52 @@ keygen1 <size_in_bytes>
 ### Examples
 
 ```bash
-# 1 MiB key
+# Generate a 1 MiB key
 keygen1 1048576
 
-# 100 MiB key
+# Generate a 100 MiB key
 keygen1 104857600
 
-# 1 GiB key
+# Generate a 1 GiB key
 keygen1 1073741824
 
-# Maximum size (20 GiB)
+# Maximum supported size (20 GiB)
 keygen1 21474836480
 ```
 
-The tool will:
-1. Prompt for a password (input is hidden)
-2. Ask for confirmation
-3. Generate `key.key` in the current directory (or exit if the file already exists)
-
 ## How It Works
 
-1. Your password is processed with **Argon2id** (64 MiB memory, 3 iterations) to produce a strong 256-bit seed.
-2. This seed is fed into **BLAKE3** using its `derive_key` mode with domain separation.
-3. BLAKE3's XOF mode then generates exactly the amount of key material you requested.
-4. The output is streamed to disk in 1 MiB chunks (low memory usage even at 20 GiB).
+1. The password is processed using **Argon2id** (64 MiB memory, 3 iterations) to produce a 256-bit seed.
+2. This seed is passed into **BLAKE3** using its `derive_key` mode along with size information for domain separation.
+3. BLAKE3's extendable-output function (XOF) then generates exactly the requested amount of key material.
+4. The output is written to disk in 1 MiB chunks for low memory usage.
+
+## Security Considerations
+
+`keygen1` produces a **deterministic pseudorandom keystream** derived from a password. It is **not** a true One-Time Pad.
+
+Please keep the following in mind:
+
+- **Do not reuse passwords**: Generating multiple keys from the same password is equivalent to keystream reuse. This should be avoided when security matters.
+- **Password strength matters**: Argon2id helps significantly, but a weak or commonly used password can still be attacked.
+- **Best used for**: Reproducible builds, testing environments, internal tooling, or any situation where you need deterministic keys derived from a strong password.
+- **Not recommended for**: High-security encryption, scenarios requiring forward secrecy, or situations where true randomness is preferred over determinism.
+
+Treat any key generated by this tool with the same care you would give to any other cryptographic key material.
 
 ## Comparison
 
-| Feature                    | Simple BLAKE3 only | keygen1 (Argon2id + BLAKE3) |
-|---------------------------|--------------------|-----------------------------|
-| Brute-force resistance    | Weak               | Strong                      |
-| Memory-hard KDF           | No                 | Yes (Argon2id)              |
-| Domain separation         | Basic              | Strong                      |
-| Suitable for real keys    | Okay               | Recommended                 |
+| Feature                    | Plain BLAKE3 / SHA-256 | keygen1 (Argon2id + BLAKE3)      |
+|---------------------------|------------------------|----------------------------------|
+| Brute-force resistance    | Weak                   | Good                             |
+| Memory-hard KDF           | No                     | Yes (Argon2id)                   |
+| Domain separation         | Basic                  | Strong                           |
+| Suitable for reproducible keys | Okay                | Good                             |
 
 ## License
 
-This project is released into the public domain. Use it however you like.
+This project is released into the public domain. You may use, modify, and distribute it however you like.
 
 ---
 
-Made with Rust. Feedback and improvements welcome!
+*Made with Rust. Honest feedback is welcome.*
