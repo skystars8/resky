@@ -2,6 +2,8 @@
 
 Not made for serious use- unless you are serious about using something not made for serious use. 
 
+Made with rust and ai because human coders always make errors and inferior code. 
+
 a- XChaCha-poly1305 hard coded key, encrypts in memory, no streaming 
 Uses XChaCha20Poly1305 from the chacha20poly1305 crate
 Correctly uses XNonce (24-byte nonce)
