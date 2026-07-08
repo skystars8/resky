@@ -26,5 +26,7 @@ d- password XChaCha-poly1305 - (currently different ai audits argue with each-ot
 
 keygen- advanced, deterministic keygen from 1 byte to 20gb 
 
+keygen1-  advanced, deterministic keygen from 1 byte to 20gb 
+
 
 
