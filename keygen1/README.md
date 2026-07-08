@@ -96,4 +96,4 @@ This project is released into the public domain. You may use, modify, and distri
 
 ---
 
-*Made with Rust. Honest feedback is welcome.*
+*Made with Rust.*
