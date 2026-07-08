@@ -24,7 +24,7 @@ c- Xor transformer / otp. Versatile.
 
 d- password XChaCha-poly1305 - (currently different ai audits argue with each-other about minor issues, overall a very solid start tho. this is in dev mode till ai gets more consistent at auditing the details. 
 
-keygen- Deterministic keygen from 1 byte to 20gb 
+keygen- Powerful and Advanced- deterministic keygen from 1 byte to 20gb 
 
 
 
