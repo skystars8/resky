@@ -1,9 +1,0 @@
-[package]
-name = "keygen"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-blake3 = "1.8"
-rpassword = "7.4"
-anyhow = "1.0"
